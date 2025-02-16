@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "Link Shortener"
     database_url: str
+    test_database_url: str = "sqlite+aiosqlite://"
     shortcut_length: int = (
         10  # Adding SHORTCUT_LENGTH env variable will override this default value
     )
