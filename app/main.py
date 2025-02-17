@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import create_db_and_tables, get_async_session
-from app.models import LinkRequest
+from app.models import CreatedLinkResponse, LinkInfoResponse, LinkRequest
 from app.services import LinkShortener, get_link_info, unfold_link as unfold_helper
 
 
@@ -24,12 +24,13 @@ def home():
     return RedirectResponse("/docs")
 
 
-@app.post("/add-link")
+@app.post("/add-link", response_model=CreatedLinkResponse)
 async def add_link(
     link_request: LinkRequest,
     request: Request,
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ):
+    """Generate a shortcut for a given URL if not exists"""
     service = LinkShortener(url=str(link_request.url), request=request, session=session)
     await service.add_link()
     return JSONResponse(service.get_result_data(), status.HTTP_201_CREATED)
@@ -39,16 +40,18 @@ async def add_link(
 async def unfold_link(
     shortcut: str, session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
+    """Unfold a shortcut and redirect to the original URL"""
     full_url = await unfold_helper(shortcut, session)
     if not full_url:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return RedirectResponse(full_url, status.HTTP_301_MOVED_PERMANENTLY)
 
 
-@app.get("/show/{id}")
+@app.get("/show/{id}", response_model=LinkInfoResponse)
 async def show_link_info(
     id: int, session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
+    """Show link details"""
     link_info = await get_link_info(id, session)
     if not link_info:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
